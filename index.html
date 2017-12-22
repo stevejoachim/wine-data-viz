@@ -107,6 +107,8 @@
           <div class="clearfix"></div>
         </div>
       </div>
+    </div>
+  </div>
 
   <!-- This rest of the file is javascript to create the charts -->
   <script type="text/javascript">
@@ -119,7 +121,7 @@
   var lineChart = dc.lineChart('#line-chart');
 
   // Use D3.js to read in the data csv
-  d3.csv('/wine-data-clean.csv', function (data) {
+  d3.csv('wine-data-clean.csv', function (data) {
     
     // First, the numerical data needs to be converted to javascript number types
     data.forEach(function(d) {
