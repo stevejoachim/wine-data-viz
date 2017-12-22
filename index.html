@@ -1,3 +1,228 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+  <meta charset='utf-8'>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>Wine Data Visualization</title>
+
+  <!-- Link to required libraries: D3.js, dc.js, crossfilter, and reductio -->
+  <script 
+    src='https://dc-js.github.io/dc.js/js/d3.js' 
+    type='text/javascript'>
+  </script>
+  <script 
+    src='https://dc-js.github.io/dc.js/js/crossfilter.js'
+    type='text/javascript'>
+  </script>
+  <script 
+    src='https://rawgit.com/crossfilter/reductio/master/reductio.js' 
+    type='text/javascript'>
+  </script>
+  <script 
+    src='https://dc-js.github.io/dc.js/js/dc.js' 
+    type='text/javascript'>
+  </script>
+
+  <!-- Link to required CSS libraries: dc.css and bootstrap -->
+  <link href='https://dc-js.github.io/dc.js/css/dc.css' rel='stylesheet' type='text/css'>
+  <link rel="stylesheet" 
+    href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" 
+    integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" 
+    crossorigin="anonymous">
+
+  <!-- Some custom CSS for extra formatting that overrides the library defaults -->
+  <style type="text/css">
+    body {
+      background-color: WhiteSmoke;
+      padding-top: 15px;
+    }
+    .dc-chart g.row text {fill: dimgray;}
+  </style>
+</head>
+
 <body>
-<h1>Some Other Heading</h1>
+  <!-- The "container", "row", and "col-x" classes are from bootstrap and are uesd to set up the layout grid -->
+  <!-- The "text-center" and "lead" classes are also from bootstrap and help with header text formatting -->
+  <div class="container">
+    <h1 class="text-center">Wine Reviews
+      <p class="lead">Interactive visualization based on a <a href="https://www.kaggle.com/zynicide/wine-reviews">dataset</a> of 130k wine reviews from <a href="http://www.winemag.com/?s=&drink_type=wine">Wine Enthusiast</a></p>
+    </h1>
+    <div class="row">
+      <div class="col-3">
+        <!-- This is the typical pattern for a chart. The chart is named with an id attribute. It has a title in <strong> tags and a reset button link that defaults to hidden (display: none;). The reset button also has javascript code in the href attribute that makes the reset work. -->
+        <div id="variety-chart">
+          <strong>Varieties</strong>
+          <span>
+            <a class="reset" 
+              href="javascript:varietyChart.filterAll();dc.redrawAll();" 
+              style="display: none;">
+              reset
+            </a>
+          </span>
+        </div>
+      </div>
+      <div class="col-9">
+        <div id="country-chart">
+          <strong>Countries</strong>
+          <span>
+            <a class="reset" 
+              href="javascript:countryChart.filterAll();dc.redrawAll();" 
+              style="display: none;">
+              reset
+            </a>
+          </span>
+          <div class="clearfix"></div>
+        </div>
+        <div id="points-chart">
+          <strong>Wines by Point Rating</strong>
+          <span>
+            <a class="reset" 
+              href="javascript:pointsChart.filterAll();dc.redrawAll();" 
+              style="display: none;">
+              reset
+            </a>
+          </span>
+          <div class="clearfix"></div>
+        </div>
+        <div id="price-chart">
+          <strong>Wines by Price</strong>
+          <span>
+            <a class="reset" 
+              href="javascript:priceChart.filterAll();dc.redrawAll();" 
+              style="display: none;">
+              reset
+            </a>
+          </span>
+          <div class="clearfix"></div>
+        </div>
+        <div id="line-chart">
+          <strong>Points vs Price</strong>
+          <span>
+            <a class="reset" 
+              href="javascript:lineChart.filterAll();dc.redrawAll();" 
+              style="display: none;">
+              reset
+            </a>
+          </span>
+          <div class="clearfix"></div>
+        </div>
+      </div>
+
+  <!-- This rest of the file is javascript to create the charts -->
+  <script type="text/javascript">
+
+  // Attach charts to the id's from <div> tags above and save to javascript variables
+  var varietyChart = dc.rowChart('#variety-chart');
+  var countryChart = dc.pieChart('#country-chart');
+  var pointsChart = dc.barChart('#points-chart');
+  var priceChart = dc.barChart('#price-chart');
+  var lineChart = dc.lineChart('#line-chart');
+
+  // Use D3.js to read in the data csv
+  d3.csv('/wine-data-clean.csv', function (data) {
+    
+    // First, the numerical data needs to be converted to javascript number types
+    data.forEach(function(d) {
+      d.points = +d.points;
+      d.price = +d.price;
+    });
+
+    // The data is saved as a crossfilter table
+    var wine = crossfilter(data);
+    
+    // For each column of interest, I saved a cross filter dimension. Then I grouped by that dimension and counted the number of rows in that group with reduceCount()
+    var variety = wine.dimension(function (d) {return d.variety;});
+    var varietyGroup = variety.group().reduceCount(function (d) {return d.variety;});
+    var country = wine.dimension(function (d) {return d.country;});
+    var countryGroup = country.group().reduceCount(function (d) {return d.country;});
+    var points = wine.dimension(function (d) {return d.points;});
+    var pointsGroup = points.group().reduceCount(function (d) {return d.points;});
+    var price = wine.dimension(function (d) {return d.price;});
+    var priceGroup = price.group();
+
+    // The average calculation is more complex to do in a reduce function like the ones above. The reductio library solves this problem below.
+    var reducer = reductio()
+      .count(true)
+      .avg(function (d) {return d.points});
+    reducer(priceGroup);
+
+    // Create the various charts. The chart properties are set with a chain of methods as shown below. Many of the chart properties are self evident but I commented properties that may be unclear.
+    varietyChart
+      .width(250)
+      .height(670)
+      .margins({top: 20, left: 10, right: 10, bottom: 20})
+      .dimension(variety) // Specify dimension to use
+      .group(varietyGroup) // Specify grouping to use
+      .gap(1) // Set gap between bars
+      .elasticX(true) // Allow X to reformat itself when data changes
+      .xAxis().ticks(4); // Set number of X ticks
+
+    countryChart
+      .width(300)
+      .height(380)
+      .radius(135)
+      .innerRadius(40)
+      .dimension(country)
+      .group(countryGroup)
+      .minAngleForLabel(.15)
+      .slicesCap(7); // Max number of slices. Remaining countries go to "other"
+
+    pointsChart
+      .width(480)
+      .height(190)
+      .margins({top: 10, right: 10, bottom: 20, left: 40})
+      .dimension(points)
+      .group(pointsGroup)
+      .transitionDuration(500)
+      .centerBar(true)  
+      .gap(1)
+      .x(d3.scale.linear().domain([80,100]))
+      .elasticY(true)
+      .renderHorizontalGridLines(true)
+      .xAxis().ticks(20);
+    
+    priceChart
+      .width(480)
+      .height(190)
+      .margins({top: 10, right: 10, bottom: 20, left: 40})
+      .dimension(price)
+      .group(priceGroup)
+      .valueAccessor(function (p) {
+        return p.value.count;
+      })
+      .transitionDuration(500)
+      .centerBar(true)  
+      .gap(0)
+      .x(d3.scale.linear().domain([0,150]))
+      .elasticY(true)
+      .renderHorizontalGridLines(true)
+      .xAxis().ticks(20).tickFormat(function (v) {return '$' + v;});
+      // Adds '$' to the X axis labels
+
+    lineChart
+      .width(800)
+      .height(260)
+      .renderArea(true) // Shows area under the line
+      .xyTipsOn(true) // Adds mouseover xy lines for clarity
+      .transitionDuration(500)
+      .margins({top: 10, right: 10, bottom: 40, left: 40})
+      .dimension(price)
+      .group(priceGroup)
+      .valueAccessor(function (p) {
+        return p.value.avg;
+      }) // Accesses the average value property for the Y axis
+      .brushOn(false) // Turns off data selection for this chart
+      .y(d3.scale.linear().domain([80, 100]))
+      .renderHorizontalGridLines(true)
+      .renderVerticalGridLines(true)
+      .xAxisLabel('Price')
+      .yAxisLabel('Point Rating')
+      .x(d3.scale.linear().domain([0.,150]))
+      .xAxis().ticks(20).tickFormat(function (v) {return '$' + v;});
+
+      // Render all of the dc.js charts
+      dc.renderAll();
+    });
+  </script>
 </body>
+</html>
