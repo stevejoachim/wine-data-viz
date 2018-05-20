@@ -121,7 +121,7 @@
   var lineChart = dc.lineChart('#line-chart');
 
   // Use D3.js to read in the data csv
-  d3.csv('wine-data-clean.csv', function (data) {
+  d3.csv('wine-data-clean.csv').then(function (data) {
     
     // First, the numerical data needs to be converted to javascript number types
     data.forEach(function(d) {
@@ -178,7 +178,7 @@
       .transitionDuration(500)
       .centerBar(true)  
       .gap(1)
-      .x(d3.scale.linear().domain([80,100]))
+      .x(d3.scaleLinear().domain([80,100]))
       .elasticY(true)
       .renderHorizontalGridLines(true)
       .xAxis().ticks(20);
@@ -195,7 +195,7 @@
       .transitionDuration(500)
       .centerBar(true)  
       .gap(0)
-      .x(d3.scale.linear().domain([0,150]))
+      .x(d3.scaleLinear().domain([0,150]))
       .elasticY(true)
       .renderHorizontalGridLines(true)
       .xAxis().ticks(20).tickFormat(function (v) {return '$' + v;});
@@ -214,12 +214,12 @@
         return p.value.avg;
       }) // Accesses the average value property for the Y axis
       .brushOn(false) // Turns off data selection for this chart
-      .y(d3.scale.linear().domain([80, 100]))
+      .y(d3.scaleLinear().domain([80, 100]))
       .renderHorizontalGridLines(true)
       .renderVerticalGridLines(true)
       .xAxisLabel('Price')
       .yAxisLabel('Point Rating')
-      .x(d3.scale.linear().domain([0.,150]))
+      .x(d3.scaleLinear().domain([0.,150]))
       .xAxis().ticks(20).tickFormat(function (v) {return '$' + v;});
 
       // Render all of the dc.js charts
